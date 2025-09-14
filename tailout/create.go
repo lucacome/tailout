@@ -56,7 +56,7 @@ func (app *App) Create(ctx context.Context) error {
 			}
 		}`), &keyCapabilities)
 	if errUnmarshal != nil {
-		return fmt.Errorf("failed to unmarshal key capabilities: %w", err)
+		return fmt.Errorf("failed to unmarshal key capabilities: %w", errUnmarshal)
 	}
 
 	key, err := apiClient.Keys().Create(context.TODO(), tsapi.CreateKeyRequest{
