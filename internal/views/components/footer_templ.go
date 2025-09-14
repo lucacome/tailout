@@ -29,7 +29,7 @@ func Footer() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<footer class=\"fixed p-1 bottom-0 bg-gray-100 w-full border-t\"><div class=\"md:container md:mx-auto\"><a class=\"rounded-lg p-4 text-s text-blue-600 visited:text-purple-600 text-center\" href=\"https://github.com/cterence/dead-drop\" target=\"_blank\">github.com/cterence/tailout</a></div></footer>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<footer class=\"fixed p-1 bottom-0 bg-gray-100 w-full border-t\"><div class=\"md:container md:mx-auto\"><a class=\"rounded-lg p-4 text-s text-blue-600 visited:text-purple-600 text-center\" href=\"https://github.com/cterence/dead-drop\" target=\"_blank\">github.com/lucacome/tailout</a></div></footer>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

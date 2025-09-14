@@ -1,5 +1,5 @@
-[![CI](https://github.com/cterence/tailout/actions/workflows/ci.yaml/badge.svg)](https://github.com/cterence/tailout/actions/workflows/ci.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cterence/tailout)](https://goreportcard.com/report/github.com/cterence/tailout)
+[![CI](https://github.com/lucacome/tailout/actions/workflows/ci.yaml/badge.svg)](https://github.com/lucacome/tailout/actions/workflows/ci.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lucacome/tailout)](https://goreportcard.com/report/github.com/lucacome/tailout)
 
 # tailout
 
@@ -9,12 +9,12 @@
 
 ## Installation
 
-To install `tailout`, you can download the latest release from the [releases page](https://github.com/cterence/tailout/releases).
+To install `tailout`, you can download the latest release from the [releases page](https://github.com/lucacome/tailout/releases).
 
 You can also use the `go install` command:
 
 ```bash
-go install github.com/cterence/tailout@latest
+go install github.com/lucacome/tailout@latest
 ```
 
 ## Prerequisites

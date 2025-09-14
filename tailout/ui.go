@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cterence/tailout/internal"
-	"github.com/cterence/tailout/internal/views"
+	"github.com/lucacome/tailout/internal"
+	"github.com/lucacome/tailout/internal/views"
 	tsapi "tailscale.com/client/tailscale/v2"
 
 	"github.com/a-h/templ"

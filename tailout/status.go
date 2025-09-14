@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"slices"
 
-	"github.com/cterence/tailout/internal"
+	"github.com/lucacome/tailout/internal"
 	"tailscale.com/client/tailscale"
 	tsapi "tailscale.com/client/tailscale/v2"
 )
