@@ -25,6 +25,9 @@ builds:
       - 7
     gomips:
       - softfloat
+    ignore:
+      - goos: windows
+        goarch: arm
     flags:
       - -trimpath
     binary: tailout
