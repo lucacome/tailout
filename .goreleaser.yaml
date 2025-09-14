@@ -3,9 +3,13 @@ builds:
   - env:
       - CGO_ENABLED=0
     goos:
-      - linux
       - darwin
+      - freebsd
+      - linux
+      - solaris
       - windows
+    flags:
+      - -trimpath
     binary: tailout
 
 archives:
@@ -18,30 +22,5 @@ sboms:
     documents:
       - "${artifact}.spdx.json"
 
-checksum:
-  name_template: "checksums.txt"
-
-snapshot:
-  version_template: "{{ .Tag }}-next"
-
 changelog:
-  sort: asc
-  use: github
-  groups:
-    - title: Features
-      regexp: "^.*(feat:|feat\\/|feat(\\([^\\)]*\\)):).*"
-      order: 0
-    - title: "Bug fixes"
-      regexp: "^.*(fix:|fix\\/|fix(\\([^\\)]*\\)):).*"
-      order: 1
-    - title: Others
-      order: 999
-  filters:
-    exclude:
-      - "^docs"
-      - "^test"
-      - "^style"
-      - "^refactor"
-      - "^build"
-      - "^ci"
-      - "^chore(release)"
+  disable: true
