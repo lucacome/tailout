@@ -59,7 +59,7 @@ func (app *App) Create(ctx context.Context) error {
 		return fmt.Errorf("failed to unmarshal key capabilities: %w", errUnmarshal)
 	}
 
-	key, err := apiClient.Keys().Create(context.TODO(), tsapi.CreateKeyRequest{
+	key, err := apiClient.Keys().Create(ctx, tsapi.CreateKeyRequest{
 		Description:  "tailout",
 		Capabilities: keyCapabilities,
 	})
