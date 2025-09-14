@@ -89,7 +89,6 @@ For exemple, you could have this content in `/etc/tailout/config.yml`:
 ```yaml
 tailscale:
   api_key: tskey-api-xxx-xxx
-  auth_key: tskey-auth-xxx-xxx
   tailnet: <your tailnet name>
 region: eu-west-3
 create:
