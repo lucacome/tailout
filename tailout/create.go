@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"sort"
 	"strconv"
@@ -29,8 +28,46 @@ func (app *App) Create(ctx context.Context) error {
 	connect := app.Config.Create.Connect
 	shutdown := app.Config.Create.Shutdown
 
-	if app.Config.Tailscale.AuthKey == "" {
-		return errors.New("no tailscale auth key found")
+	baseURL, err := url.Parse(app.Config.Tailscale.BaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to parse base URL: %w", err)
+	}
+
+	apiClient := &tsapi.Client{
+		APIKey:  app.Config.Tailscale.APIKey,
+		Tailnet: app.Config.Tailscale.Tailnet,
+		BaseURL: baseURL,
+	}
+
+	keyCapabilities := tsapi.KeyCapabilities{
+		Devices: struct {
+			Create struct {
+				Reusable      bool     `json:"reusable"`
+				Ephemeral     bool     `json:"ephemeral"`
+				Tags          []string `json:"tags"`
+				Preauthorized bool     `json:"preauthorized"`
+			} `json:"create"`
+		}{
+			Create: struct {
+				Reusable      bool     `json:"reusable"`
+				Ephemeral     bool     `json:"ephemeral"`
+				Tags          []string `json:"tags"`
+				Preauthorized bool     `json:"preauthorized"`
+			}{
+				Reusable:      false,
+				Ephemeral:     true,
+				Tags:          []string{"tag:tailout"},
+				Preauthorized: true,
+			},
+		},
+	}
+
+	key, err := apiClient.Keys().Create(ctx, tsapi.CreateKeyRequest{
+		Description:  "tailout",
+		Capabilities: keyCapabilities,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create auth key: %w", err)
 	}
 
 	// TODO: add option for no shutdown
@@ -57,7 +94,7 @@ func (app *App) Create(ctx context.Context) error {
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
+		return fmt.Errorf("unable to load SDK config: %w", err)
 	}
 
 	ec2Svc := ec2.NewFromConfig(cfg)
@@ -113,7 +150,7 @@ TOKEN=$(curl -sSL -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2
 INSTANCE_ID=$(curl -sSL -H "X-aws-ec2-metadata-token: ${TOKEN}" http://169.254.169.254/latest/meta-data/instance-id)
 
 curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up --auth-key=` + app.Config.Tailscale.AuthKey + ` --hostname=tailout-` + region + `-${INSTANCE_ID} --advertise-exit-node --ssh
+sudo tailscale up --auth-key=` + key.Key + ` --hostname=tailout-` + region + `-${INSTANCE_ID} --advertise-exit-node --ssh
 sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minutes`
 
 	// Encode the string in base64
@@ -226,19 +263,14 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 
 	timeout := time.Now().Add(3 * time.Minute)
 
-	baseURL, err := url.Parse(app.Config.Tailscale.BaseURL)
-	if err != nil {
-		return fmt.Errorf("failed to parse base URL: %w", err)
-	}
-
-	client := &tsapi.Client{
-		APIKey:  app.Config.Tailscale.APIKey,
-		Tailnet: app.Config.Tailscale.Tailnet,
-		BaseURL: baseURL,
-	}
-
 	for {
-		nodes, err := client.Devices().List(ctx)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		nodes, err := apiClient.Devices().List(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get devices: %w", err)
 		}
