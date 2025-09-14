@@ -3,10 +3,8 @@ package tailout
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"sort"
 	"strconv"
@@ -41,22 +39,27 @@ func (app *App) Create(ctx context.Context) error {
 		BaseURL: baseURL,
 	}
 
-	var keyCapabilities tsapi.KeyCapabilities
-	errUnmarshal := json.Unmarshal([]byte(`
-		{
-			"devices": {
-				"create": {
-					"reusable": false,
-					"ephemeral": true,
-					"preauthorized": true,
-					"tags": [
-						"tag:tailout"
-					]
-				}
-			}
-		}`), &keyCapabilities)
-	if errUnmarshal != nil {
-		return fmt.Errorf("failed to unmarshal key capabilities: %w", errUnmarshal)
+	keyCapabilities := tsapi.KeyCapabilities{
+		Devices: struct {
+			Create struct {
+				Reusable      bool     `json:"reusable"`
+				Ephemeral     bool     `json:"ephemeral"`
+				Tags          []string `json:"tags"`
+				Preauthorized bool     `json:"preauthorized"`
+			} `json:"create"`
+		}{
+			Create: struct {
+				Reusable      bool     `json:"reusable"`
+				Ephemeral     bool     `json:"ephemeral"`
+				Tags          []string `json:"tags"`
+				Preauthorized bool     `json:"preauthorized"`
+			}{
+				Reusable:      false,
+				Ephemeral:     true,
+				Tags:          []string{"tag:tailout"},
+				Preauthorized: true,
+			},
+		},
 	}
 
 	key, err := apiClient.Keys().Create(ctx, tsapi.CreateKeyRequest{
@@ -91,7 +94,7 @@ func (app *App) Create(ctx context.Context) error {
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
+		return fmt.Errorf("unable to load SDK config: %w", err)
 	}
 
 	ec2Svc := ec2.NewFromConfig(cfg)
@@ -261,6 +264,12 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 	timeout := time.Now().Add(3 * time.Minute)
 
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		nodes, err := apiClient.Devices().List(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get devices: %w", err)
