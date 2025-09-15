@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/cterence/tailout/internal"
+	"github.com/lucacome/tailout/internal"
 	tsapi "tailscale.com/client/tailscale/v2"
 )
 

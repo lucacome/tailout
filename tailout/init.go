@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/cterence/tailout/internal"
+	"github.com/lucacome/tailout/internal"
 	tsapi "tailscale.com/client/tailscale/v2"
 )
 

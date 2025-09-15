@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cterence/tailout/cmd"
-	"github.com/cterence/tailout/tailout"
+	"github.com/lucacome/tailout/cmd"
+	"github.com/lucacome/tailout/tailout"
 )
 
 func main() {

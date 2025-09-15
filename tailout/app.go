@@ -1,7 +1,7 @@
 package tailout
 
 import (
-	"github.com/cterence/tailout/tailout/config"
+	"github.com/lucacome/tailout/tailout/config"
 )
 
 type App struct {

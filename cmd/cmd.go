@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/cterence/tailout/tailout"
+	"github.com/lucacome/tailout/tailout"
 	"github.com/spf13/cobra"
 )
 

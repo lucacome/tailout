@@ -3,9 +3,33 @@ builds:
   - env:
       - CGO_ENABLED=0
     goos:
-      - linux
       - darwin
+      - freebsd
+      - linux
+      # - solaris
       - windows
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+      - mips64
+      - mips64le
+      - ppc64
+      - ppc64le
+      - riscv64
+      - s390x
+    goarm:
+      - 5
+      - 6
+      - 7
+    gomips:
+      - softfloat
+    ignore:
+      - goos: windows
+        goarch: arm
+    flags:
+      - -trimpath
     binary: tailout
 
 archives:
@@ -18,30 +42,5 @@ sboms:
     documents:
       - "${artifact}.spdx.json"
 
-checksum:
-  name_template: "checksums.txt"
-
-snapshot:
-  version_template: "{{ .Tag }}-next"
-
 changelog:
-  sort: asc
-  use: github
-  groups:
-    - title: Features
-      regexp: "^.*(feat:|feat\\/|feat(\\([^\\)]*\\)):).*"
-      order: 0
-    - title: "Bug fixes"
-      regexp: "^.*(fix:|fix\\/|fix(\\([^\\)]*\\)):).*"
-      order: 1
-    - title: Others
-      order: 999
-  filters:
-    exclude:
-      - "^docs"
-      - "^test"
-      - "^style"
-      - "^refactor"
-      - "^build"
-      - "^ci"
-      - "^chore(release)"
+  disable: true

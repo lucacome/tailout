@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cterence/tailout/internal"
-	"github.com/cterence/tailout/internal/views"
+	"github.com/lucacome/tailout/internal"
+	"github.com/lucacome/tailout/internal/views"
 	tsapi "tailscale.com/client/tailscale/v2"
 
 	"github.com/a-h/templ"
@@ -80,7 +80,6 @@ func (app *App) UI(ctx context.Context, args []string) error {
 	// Serve assets files
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("internal/assets"))))
 
-	slog.Info("Server starting", "address", app.Config.UI.Address, "port", app.Config.UI.Port)
 	srv := &http.Server{
 		Addr:         app.Config.UI.Address + ":" + app.Config.UI.Port,
 		ReadTimeout:  5 * time.Second,
@@ -88,9 +87,29 @@ func (app *App) UI(ctx context.Context, args []string) error {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		slog.Error("Failed to start server", "error", err)
-		panic(err)
+	slog.Info("Server starting", "address", app.Config.UI.Address, "port", app.Config.UI.Port)
+
+	// Start server in a goroutine
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Failed to start server", "error", err)
+		}
+	}()
+
+	// Wait for context cancellation
+	<-ctx.Done()
+	slog.Info("Shutting down server...")
+
+	// Create shutdown context with timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("Server shutdown failed", "error", err)
+		return fmt.Errorf("server shutdown failed: %w", err)
 	}
+
+	slog.Info("Server stopped")
 	return nil
 }

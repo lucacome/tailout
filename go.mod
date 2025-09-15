@@ -1,4 +1,4 @@
-module github.com/cterence/tailout
+module github.com/lucacome/tailout
 
 go 1.25.1
 

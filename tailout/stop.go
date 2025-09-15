@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/cterence/tailout/internal"
 	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/lucacome/tailout/internal"
 	tsapi "tailscale.com/client/tailscale/v2"
 )
 
