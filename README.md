@@ -4,7 +4,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucacome/tailout)](https://goreportcard.com/report/github.com/lucacome/tailout)
 
 `tailout` is a command-line tool for quickly creating a cloud-based exit node in your tailnet.
-This project was forked from [cterence/tailout](https://github.com/cterence/tailout).
 
 ![demo gif](./docs/demo.gif)
 
@@ -101,3 +100,13 @@ You can specify any of the above settings as command-line flags or environment v
 
 For example, to specify the Tailscale API key, you can use the `--tailscale-api-key` flag or
 the `TAILOUT_TAILSCALE_API_KEY` environment variable.
+
+## License
+
+This repository contains code under the following terms:
+
+1. Portions derived from [cterence/tailout](https://github.com/cterence/tailout)
+remain licensed under the Apache License 2.0 (original work by the upstream authors).
+2. New contributions to this fork are made available under either the Apache License 2.0 OR the MIT License, at your option.
+
+See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) for full license texts.
