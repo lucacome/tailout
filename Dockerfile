@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.17
-FROM golang:1.25.1 AS builder
+# syntax=docker/dockerfile:1.17@sha256:38387523653efa0039f8e1c89bb74a30504e76ee9f565e25c9a09841f9427b05
+FROM golang:1.25.1@sha256:bb979b278ffb8d31c8b07336fd187ef8fafc8766ebeaece524304483ea137e96 AS builder
 ARG TARGETARCH
 
 WORKDIR /go/src/github.com/lucacome/tailout
@@ -12,7 +12,7 @@ COPY --link . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -trimpath -a -o tailout .
 
 
-FROM --platform=$BUILDPLATFORM alpine:3.22 AS certs
+FROM --platform=$BUILDPLATFORM alpine:3.22@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 AS certs
 
 
 FROM scratch AS base
