@@ -1,8 +1,4 @@
-This project is dual-licensed under:
+This repository contains code under the following terms:
 
-1. Apache License 2.0 (for original work by Térence Chateigné)
-2. MIT License (for contributions by Luca Comellini and others)
-
-See LICENSE-APACHE and LICENSE-MIT for full license texts.
-
-You may choose to use this software under the terms of either license.
+    1. Portions derived from cterence/tailout remain licensed under the Apache License 2.0 (original work by the upstream authors).
+    2. New contributions to this fork are made available under either the Apache License 2.0 OR the MIT License, at your option.
