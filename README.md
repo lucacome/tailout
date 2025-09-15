@@ -4,6 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucacome/tailout)](https://goreportcard.com/report/github.com/lucacome/tailout)
 
 `tailout` is a command-line tool for quickly creating a cloud-based exit node in your tailnet.
+This project was forked from [cterence/tailout](https://github.com/cterence/tailout).
 
 ![demo gif](./docs/demo.gif)
 
