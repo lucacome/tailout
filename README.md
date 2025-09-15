@@ -1,7 +1,7 @@
+# tailout
+
 [![CI](https://github.com/lucacome/tailout/actions/workflows/ci.yaml/badge.svg)](https://github.com/lucacome/tailout/actions/workflows/ci.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucacome/tailout)](https://goreportcard.com/report/github.com/lucacome/tailout)
-
-# tailout
 
 `tailout` is a command-line tool for quickly creating a cloud-based exit node in your tailnet.
 
@@ -41,7 +41,8 @@ Go to your [Tailscale API key settings](https://login.tailscale.com/admin/settin
 
 - Run `tailout init`, review the changes that will be done to your policy and accept
 
-Next, you will also need to set up your AWS credentials. tailout will look for default credentials, like environment variables for access keys or an AWS profile.
+Next, you will also need to set up your AWS credentials. tailout will look for default credentials,
+like environment variables for access keys or an AWS profile.
 
 To easily check if your credentials are set up correctly, you can use the `aws sts get-caller-identity` command.
 
@@ -97,4 +98,5 @@ create:
 
 You can specify any of the above settings as command-line flags or environment variables prefixed by `TAILOUT_`.
 
-For example, to specify the Tailscale API key, you can use the `--tailscale-api-key` flag or the `TAILOUT_TAILSCALE_API_KEY` environment variable.
+For example, to specify the Tailscale API key, you can use the `--tailscale-api-key` flag or
+the `TAILOUT_TAILSCALE_API_KEY` environment variable.

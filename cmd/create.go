@@ -23,7 +23,7 @@ func buildCreateCommand(app *tailout.App) *cobra.Command {
  - Tagged with App=tailout
  - The instance will be created as a spot instance in the default VPC`,
 
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			err := app.Create(cmd.Context())
 			if err != nil {
 				return fmt.Errorf("failed to create exit node: %w", err)

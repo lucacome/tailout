@@ -13,8 +13,8 @@ func buildUICommand(app *tailout.App) *cobra.Command {
 		Args:  cobra.ArbitraryArgs,
 		Use:   "ui",
 		Short: "Start the Tailout UI",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			err := app.UI(cmd.Context(), args)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			err := app.UI(cmd.Context())
 			if err != nil {
 				return fmt.Errorf("failed to start UI: %w", err)
 			}

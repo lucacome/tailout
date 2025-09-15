@@ -10,7 +10,7 @@ import (
 	"slices"
 
 	"github.com/lucacome/tailout/internal"
-	"tailscale.com/client/tailscale"
+	tslocal "tailscale.com/client/local"
 	tsapi "tailscale.com/client/tailscale/v2"
 )
 
@@ -31,7 +31,7 @@ func (app *App) Status(ctx context.Context) error {
 		return fmt.Errorf("failed to get active nodes: %w", err)
 	}
 
-	var localClient tailscale.LocalClient
+	var localClient tslocal.Client
 	status, err := localClient.Status(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get tailscale preferences: %w", err)

@@ -41,14 +41,14 @@ func (app *App) Create(ctx context.Context) error {
 
 	keyCapabilities := tsapi.KeyCapabilities{
 		Devices: struct {
-			Create struct {
+			Create struct { //nolint:govet
 				Reusable      bool     `json:"reusable"`
 				Ephemeral     bool     `json:"ephemeral"`
 				Tags          []string `json:"tags"`
 				Preauthorized bool     `json:"preauthorized"`
 			} `json:"create"`
 		}{
-			Create: struct {
+			Create: struct { //nolint:govet
 				Reusable      bool     `json:"reusable"`
 				Ephemeral     bool     `json:"ephemeral"`
 				Tags          []string `json:"tags"`
@@ -190,9 +190,9 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 `, *identity.Account, imageID, instanceType, region, shutdown, connect)
 
 	if !nonInteractive {
-		result, err := internal.PromptYesNo("Do you want to create this instance?")
-		if err != nil {
-			return fmt.Errorf("failed to prompt for confirmation: %w", err)
+		result, promptErr := internal.PromptYesNo("Do you want to create this instance?")
+		if promptErr != nil {
+			return fmt.Errorf("failed to prompt for confirmation: %w", promptErr)
 		}
 
 		if !result {
@@ -201,9 +201,9 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 	}
 
 	// Run the EC2 instance
-	runResult, err := ec2Svc.RunInstances(ctx, runInput)
-	if err != nil {
-		return fmt.Errorf("failed to create EC2 instance: %w", err)
+	runResult, runErr := ec2Svc.RunInstances(ctx, runInput)
+	if runErr != nil {
+		return fmt.Errorf("failed to create EC2 instance: %w", runErr)
 	}
 
 	if len(runResult.Instances) == 0 {
@@ -266,13 +266,13 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("operation canceled: %w", ctx.Err())
 		default:
 		}
 
-		nodes, err := apiClient.Devices().List(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get devices: %w", err)
+		nodes, deviceErr := apiClient.Devices().List(ctx)
+		if deviceErr != nil {
+			return fmt.Errorf("failed to get devices: %w", deviceErr)
 		}
 
 		for _, node := range nodes {
