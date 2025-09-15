@@ -101,10 +101,11 @@ func (app *App) UI(ctx context.Context) error {
 	slog.Info("Shutting down server...")
 
 	// Create shutdown context with timeout
-	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Attempt graceful shutdown
+	//nolint:contextcheck // Using Background() is intentional for independent shutdown timeout
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Server shutdown failed", "error", err)
 		return fmt.Errorf("server shutdown failed: %w", err)
