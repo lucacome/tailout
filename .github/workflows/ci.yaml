@@ -70,6 +70,15 @@ jobs:
         with:
           go-version: stable
 
+      - name: Create/Update Draft
+        uses: lucacome/draft-release@00f74370c044c322da6cb52acc707d62c7762c71 # v1.2.4
+        with:
+          minor-label: "enhancement"
+          major-label: "change"
+          publish: ${{ github.ref_type == 'tag' }}
+          collapse-after: 30
+        if: github.event_name != 'pull_request'
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
