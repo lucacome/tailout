@@ -14,7 +14,7 @@ func buildTailoutCommand(app *tailout.App) *cobra.Command {
 		Use:          "tailout",
 		Short:        "Quickly create a cloud-based exit node in your tailnet",
 		SilenceUsage: true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			return app.Config.Load(cmd.Flags(), cmd.Name())
 		},
 	}

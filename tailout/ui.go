@@ -15,7 +15,7 @@ import (
 	"github.com/a-h/templ"
 )
 
-func (app *App) UI(ctx context.Context, args []string) error {
+func (app *App) UI(ctx context.Context) error {
 	indexComponent := views.Index()
 	app.Config.NonInteractive = true
 
@@ -32,7 +32,7 @@ func (app *App) UI(ctx context.Context, args []string) error {
 
 	http.Handle("/", templ.Handler(indexComponent))
 
-	http.HandleFunc("/create", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/create", func(w http.ResponseWriter, _ *http.Request) {
 		slog.Info("Creating tailout node")
 		go func() {
 			err := app.Create(ctx)
@@ -43,7 +43,7 @@ func (app *App) UI(ctx context.Context, args []string) error {
 		w.WriteHeader(http.StatusCreated)
 	})
 
-	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/stop", func(w http.ResponseWriter, _ *http.Request) {
 		slog.Info("Stopping tailout nodes")
 		app.Config.Stop.All = true
 		go func() {
@@ -55,7 +55,7 @@ func (app *App) UI(ctx context.Context, args []string) error {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/status", func(w http.ResponseWriter, _ *http.Request) {
 		nodes, err := internal.GetActiveNodes(ctx, client)
 		if err != nil {
 			slog.Error("failed to get active nodes", "error", err)
@@ -71,7 +71,7 @@ func (app *App) UI(ctx context.Context, args []string) error {
 		}
 	})
 
-	http.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if _, err := w.Write([]byte(`{"status": {"server": "OK"}}`)); err != nil {
 			slog.Error("failed to write health check response", "error", err)
 		}
@@ -105,6 +105,7 @@ func (app *App) UI(ctx context.Context, args []string) error {
 	defer cancel()
 
 	// Attempt graceful shutdown
+	//nolint:contextcheck // Using Background() is intentional for independent shutdown timeout
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Server shutdown failed", "error", err)
 		return fmt.Errorf("server shutdown failed: %w", err)

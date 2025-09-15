@@ -10,7 +10,7 @@ import (
 
 	"github.com/lucacome/tailout/internal"
 	"github.com/manifoldco/promptui"
-	"tailscale.com/client/tailscale"
+	tslocal "tailscale.com/client/local"
 	tsapi "tailscale.com/client/tailscale/v2"
 	"tailscale.com/ipn"
 	"tailscale.com/tailcfg"
@@ -39,13 +39,14 @@ func (app *App) Connect(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to get active nodes: %w", err)
 	}
 
-	if len(args) != 0 {
+	switch {
+	case len(args) != 0:
 		nodeConnect = args[0]
 		i := slices.IndexFunc(tailoutDevices, func(e tsapi.Device) bool {
 			return e.Hostname == nodeConnect
 		})
 		deviceToConnectTo = tailoutDevices[i]
-	} else if !nonInteractive {
+	case !nonInteractive:
 		if len(tailoutDevices) == 0 {
 			return errors.New("no tailout node found in your tailnet")
 		}
@@ -62,18 +63,18 @@ func (app *App) Connect(ctx context.Context, args []string) error {
 			},
 		}
 
-		idx, _, err := prompt.Run()
-		if err != nil {
-			return fmt.Errorf("failed to select node: %w", err)
+		idx, _, promptErr := prompt.Run()
+		if promptErr != nil {
+			return fmt.Errorf("failed to select node: %w", promptErr)
 		}
 
 		deviceToConnectTo = tailoutDevices[idx]
 		nodeConnect = deviceToConnectTo.ID
-	} else {
+	default:
 		return errors.New("no node name provided")
 	}
 
-	var localClient tailscale.LocalClient
+	var localClient tslocal.Client
 
 	prefs := ipn.NewPrefs()
 

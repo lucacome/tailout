@@ -18,7 +18,7 @@ func buildInitCommand(app *tailout.App) *cobra.Command {
 	 - adding a new tag 'tag:tailout',
 	 - adding exit nodes tagged with 'tag:tailout to auto approvers',
 	 - allowing your tailnet devices to SSH into tailout nodes.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			err := app.Init(cmd.Context())
 			if err != nil {
 				return fmt.Errorf("failed to initialize tailnet policy: %w", err)

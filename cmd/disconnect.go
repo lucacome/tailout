@@ -13,7 +13,7 @@ func buildDisconnectCommand(app *tailout.App) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Use:   "disconnect",
 		Short: "Disconnect from an exit node in your tailnet",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			err := app.Disconnect(cmd.Context())
 			if err != nil {
 				return fmt.Errorf("failed to disconnect: %w", err)

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"net/netip"
 
-	"tailscale.com/client/tailscale"
+	tslocal "tailscale.com/client/local"
 	"tailscale.com/ipn"
 )
 
 func (app *App) Disconnect(ctx context.Context) error {
-	var localClient tailscale.LocalClient
+	var localClient tslocal.Client
 	prefs, err := localClient.GetPrefs(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get prefs: %w", err)

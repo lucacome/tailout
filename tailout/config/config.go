@@ -67,7 +67,7 @@ func (c *Config) Load(flags *pflag.FlagSet, cmdName string) error {
 
 	// Options with dashes in flag names have underscores when set inside a
 	// configuration file or with environment variables.
-	flags.SetNormalizeFunc(func(fs *pflag.FlagSet, name string) pflag.NormalizedName {
+	flags.SetNormalizeFunc(func(_ *pflag.FlagSet, name string) pflag.NormalizedName {
 		name = strings.ReplaceAll(name, "-", "_")
 		return pflag.NormalizedName(name)
 	})
