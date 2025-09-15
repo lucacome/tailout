@@ -1,0 +1,8 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>lucacome/common",
+    "schedule:weekly"
+  ],
+  "rangeStrategy": "bump"
+}
