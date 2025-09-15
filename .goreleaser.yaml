@@ -6,7 +6,7 @@ builds:
       - darwin
       - freebsd
       - linux
-      - solaris
+      # - solaris
       - windows
     goarch:
       - 386
