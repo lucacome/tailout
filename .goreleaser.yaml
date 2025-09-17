@@ -39,8 +39,40 @@ archives:
 
 sboms:
   - artifacts: archive
+    args:
+      - scan
+      - "--enrich=all"
+      - "$artifact"
+      - "--output"
+      - "spdx-json=$document"
     documents:
       - "${artifact}.spdx.json"
 
 changelog:
   disable: true
+
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    output: true
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+      - "--yes"
+
+homebrew_casks:
+  - repository:
+      owner: lucacome
+      name: homebrew-tap
+    description: "Spawn an exit node for your tailnet anywhere with Tailout"
+    homepage: "https://github.com/lucacome/tailout"
+    license: "Apache-2.0, MIT"
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/tailout"]
+          end
