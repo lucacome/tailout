@@ -69,7 +69,7 @@ homebrew_casks:
       name: homebrew-tap
     description: "Spawn an exit node for your tailnet anywhere with Tailout"
     homepage: "https://github.com/lucacome/tailout"
-    license: "Apache-2.0, MIT"
+    license: "Apache-2.0 AND MIT"
     hooks:
       post:
         install: |
