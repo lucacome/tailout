@@ -58,6 +58,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      attestations: write
     needs: checks
     steps:
       - name: Checkout repository
@@ -95,6 +96,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        continue-on-error: true
+        with:
+          subject-checksums: tailout_${GITHUB_REF_NAME#v}_checksums.txt
+        if: github.ref_type == 'tag'
+
+      - name: Generate SBOM attestation
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3.0.0
+        continue-on-error: true
+        with:
+          subject-path: 'dist/**/tailout*'
+          sbom-path: 'dist/**/tailout*.sbom.spdx.json'
+        if: github.ref_type == 'tag'
+
       - name: Print tailout version
         run: ./dist/tailout_linux_amd64_v1/tailout version
 
@@ -109,7 +125,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      attestations: write
       id-token: write
       security-events: write
     services:
@@ -193,14 +208,6 @@ jobs:
         continue-on-error: true
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
-        with:
-          subject-name: ghcr.io/${{ github.repository }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-        if: github.event_name != 'pull_request'
 
   e2e-tests:
     runs-on: ubuntu-24.04
