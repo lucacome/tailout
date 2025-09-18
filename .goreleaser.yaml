@@ -46,7 +46,7 @@ sboms:
       - "--output"
       - "spdx-json=$document"
     documents:
-      - "${artifact}.spdx.json"
+      - "${artifact}.sbom.spdx.json"
 
 changelog:
   disable: true
