@@ -82,7 +82,6 @@ func (app *App) Create(ctx context.Context) error {
 	}
 
 	// Create EC2 service client
-
 	if region == "" && !nonInteractive {
 		region, err = internal.SelectRegion(ctx)
 		if err != nil {
@@ -190,7 +189,7 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 `, *identity.Account, imageID, instanceType, region, shutdown, connect)
 
 	if !nonInteractive {
-		result, promptErr := internal.PromptYesNo("Do you want to create this instance?")
+		result, promptErr := internal.PromptYesNo(ctx, "Do you want to create this instance?")
 		if promptErr != nil {
 			return fmt.Errorf("failed to prompt for confirmation: %w", promptErr)
 		}
