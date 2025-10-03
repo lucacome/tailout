@@ -8,15 +8,18 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
-	"sync"
 	"time"
 
-	"github.com/adhocore/chin"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	ssmTypes "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go"
+
+	"github.com/charmbracelet/huh/spinner"
 	"github.com/lucacome/tailout/internal"
 	tsapi "tailscale.com/client/tailscale/v2"
 )
@@ -82,7 +85,6 @@ func (app *App) Create(ctx context.Context) error {
 	}
 
 	// Create EC2 service client
-
 	if region == "" && !nonInteractive {
 		region, err = internal.SelectRegion(ctx)
 		if err != nil {
@@ -92,11 +94,94 @@ func (app *App) Create(ctx context.Context) error {
 		return errors.New("selected non-interactive mode but no region was explicitly specified")
 	}
 
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region), config.WithRetryMaxAttempts(5), config.WithRetryMode(aws.RetryModeStandard))
 	if err != nil {
 		return fmt.Errorf("unable to load SDK config: %w", err)
 	}
 
+	runInput, errPrep := prepareInstance(ctx, cfg, aws.Bool(dryRun))
+	if errPrep != nil {
+		return fmt.Errorf("failed to prepare instance: %w", errPrep)
+	}
+	if runInput == nil {
+		fmt.Println("Instance creation aborted.")
+		return nil
+	}
+
+	var publicIPAddress string
+	var nodeName string
+	var instanceID string
+	s := spinner.New().Type(spinner.Dots).Title("Creating instance...")
+	errSpin := s.Context(ctx).ActionWithErr(func(context.Context) error {
+		instance, createErr := createInstance(ctx, cfg, runInput, key.Key, s)
+		if createErr != nil {
+			return createErr
+		}
+		if instance.InstanceID == "" {
+			return fmt.Errorf("instance creation aborted")
+		}
+		instanceID = instance.InstanceID
+		nodeName = instance.Name
+		publicIPAddress = instance.IP
+		return nil
+	}).Run()
+	if errSpin != nil {
+		return fmt.Errorf("failed to create instance: %w", errSpin)
+	}
+
+	// If dry run, exit here?
+
+	st := spinner.New().Type(spinner.Dots).Title("Installing Tailscale...")
+	errSpint := st.Context(ctx).ActionWithErr(func(context.Context) error {
+		errInstall := installTailScale(ctx, cfg, key.Key, nodeName, instanceID, st)
+		if errInstall != nil {
+			return errInstall
+		}
+		return nil
+	}).Run()
+	if errSpint != nil {
+		return fmt.Errorf("failed to install Tailscale: %w", errSpint)
+	}
+
+	fmt.Println("Tailscale installed.")
+
+	nodes, deviceErr := apiClient.Devices().List(ctx)
+	if deviceErr != nil {
+		return fmt.Errorf("failed to get devices: %w", deviceErr)
+	}
+
+	found := false
+	for _, node := range nodes {
+		if node.Hostname == nodeName {
+			fmt.Printf("Node %s joined tailnet.\n", nodeName)
+			fmt.Println("Public IP address:", publicIPAddress)
+			fmt.Println("Planned termination time:", time.Now().Add(duration).Format(time.RFC3339))
+			found = true
+			break
+		}
+	}
+	if !found {
+		return errors.New("failed to find the created node in tailnet")
+	}
+
+	if connect {
+		fmt.Println()
+		args := []string{nodeName}
+		err = app.Connect(ctx, args)
+		if err != nil {
+			return fmt.Errorf("failed to connect to node: %w", err)
+		}
+	}
+	return nil
+}
+
+type instance struct {
+	InstanceID string
+	Name       string
+	IP         string
+}
+
+func prepareInstance(ctx context.Context, cfg aws.Config, dryRun *bool) (instance *ec2.RunInstancesInput, err error) {
 	ec2Svc := ec2.NewFromConfig(cfg)
 
 	// DescribeImages to get the latest Amazon Linux AMI
@@ -122,11 +207,11 @@ func (app *App) Create(ctx context.Context) error {
 		Owners: []string{"amazon"},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to describe Amazon Linux images: %w", err)
+		return nil, fmt.Errorf("failed to describe Amazon Linux images: %w", err)
 	}
 
 	if len(amazonLinuxImages.Images) == 0 {
-		return errors.New("no Amazon Linux images found")
+		return nil, errors.New("no Amazon Linux images found")
 	}
 
 	sort.Slice(amazonLinuxImages.Images, func(i, j int) bool {
@@ -136,22 +221,20 @@ func (app *App) Create(ctx context.Context) error {
 	// Get the latest Amazon Linux AMI ID
 	latestAMI := amazonLinuxImages.Images[0]
 	imageID := *latestAMI.ImageId
+	imageName := *latestAMI.Name
+	imageOwner := *latestAMI.ImageOwnerAlias
+	imageArchitecture := latestAMI.Architecture
 
 	// Define the instance details
 	// TODO: add option for instance type
-	instanceType := "t3a.micro"
+	// instanceType := "t3a.micro"
+	// TODO: Fix shutdown time
 	userDataScript := `#!/bin/bash
 # Allow ip forwarding
 echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf
 echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p /etc/sysctl.conf
-
-TOKEN=$(curl -sSL -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-INSTANCE_ID=$(curl -sSL -H "X-aws-ec2-metadata-token: ${TOKEN}" http://169.254.169.254/latest/meta-data/instance-id)
-
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up --auth-key=` + key.Key + ` --hostname=tailout-` + region + `-${INSTANCE_ID} --advertise-exit-node --ssh
-sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minutes`
+sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(10) + ` minutes`
 
 	// Encode the string in base64
 	userDataScriptBase64 := base64.StdEncoding.EncodeToString([]byte(userDataScript))
@@ -163,7 +246,18 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 		MinCount:     aws.Int32(1),
 		MaxCount:     aws.Int32(1),
 		UserData:     aws.String(userDataScriptBase64),
-		DryRun:       aws.Bool(dryRun),
+		TagSpecifications: []types.TagSpecification{
+			{
+				ResourceType: types.ResourceTypeInstance,
+				Tags: []types.Tag{
+					{
+						Key:   aws.String("App"),
+						Value: aws.String("tailout"),
+					},
+				},
+			},
+		},
+		DryRun: dryRun,
 		InstanceMarketOptions: &types.InstanceMarketOptionsRequest{
 			MarketType: types.MarketTypeSpot,
 			SpotOptions: &types.SpotMarketOptions{
@@ -176,51 +270,55 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 
 	identity, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
-		return fmt.Errorf("failed to get account ID: %w", err)
+		return instance, fmt.Errorf("failed to get account ID: %w", err)
 	}
 
 	fmt.Printf(`Creating tailout node in AWS with the following parameters:
 - AWS Account ID: %s
-- AMI ID: %s
+- AMI ID: %s (%s by %s)
+- AMI Architecture: %s
 - Instance Type: %s
 - Region: %s
 - Auto shutdown after: %s
-- Connect after instance up: %v
 - Network: default VPC / Subnet / Security group of the region
-`, *identity.Account, imageID, instanceType, region, shutdown, connect)
+	`, *identity.Account, imageID, imageName, imageOwner, imageArchitecture, types.InstanceTypeT3aMicro, cfg.Region, "TODO")
 
-	if !nonInteractive {
-		result, promptErr := internal.PromptYesNo("Do you want to create this instance?")
-		if promptErr != nil {
-			return fmt.Errorf("failed to prompt for confirmation: %w", promptErr)
-		}
-
-		if !result {
-			return nil
-		}
+	result, promptErr := internal.PromptYesNo(ctx, "Do you want to create this instance?")
+	if promptErr != nil {
+		return nil, fmt.Errorf("failed to prompt for confirmation: %w", promptErr)
 	}
+
+	if !result {
+		return nil, nil
+	}
+	return runInput, nil
+}
+
+func createInstance(ctx context.Context, cfg aws.Config, runInput *ec2.RunInstancesInput, key string, spin *spinner.Spinner) (instance instance, err error) {
+	ec2Svc := ec2.NewFromConfig(cfg)
 
 	// Run the EC2 instance
 	runResult, runErr := ec2Svc.RunInstances(ctx, runInput)
 	if runErr != nil {
-		return fmt.Errorf("failed to create EC2 instance: %w", runErr)
+		var dryRunErr *smithy.GenericAPIError
+		if errors.As(runErr, &dryRunErr) && dryRunErr.Code == "DryRunOperation" {
+			fmt.Println("Dry run successful. Instance can be created.")
+			return instance, nil
+		}
+		return instance, fmt.Errorf("failed to create EC2 instance: %w", runErr)
 	}
 
 	if len(runResult.Instances) == 0 {
 		fmt.Println("No instances created.")
-		return nil
+		return instance, nil
 	}
-
 	createdInstance := runResult.Instances[0]
-	fmt.Println("EC2 instance created successfully:", *createdInstance.InstanceId)
-	nodeName := fmt.Sprintf("tailout-%s-%s", region, *createdInstance.InstanceId)
-	fmt.Println("Instance will be named", nodeName)
+
+	fmt.Println("Instance created:", *createdInstance.InstanceId)
+
+	nodeName := fmt.Sprintf("tailout-%s-%s", cfg.Region, *createdInstance.InstanceId)
 	// Create tags for the instance
 	tags := []types.Tag{
-		{
-			Key:   aws.String("App"),
-			Value: aws.String("tailout"),
-		},
 		{
 			Key:   aws.String("Name"),
 			Value: aws.String(nodeName),
@@ -233,103 +331,91 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(durationMinutes) + ` minut
 		Tags:      tags,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to add tags to the instance: %w", err)
+		return instance, fmt.Errorf("failed to add tags to the instance: %w", err)
 	}
 
-	// Initialize loading spinner
-	var wg sync.WaitGroup
-	var s *chin.Chin
-
-	if !nonInteractive {
-		s = chin.New().WithWait(&wg)
-		go s.Start()
-	}
-
-	fmt.Println("Waiting for instance to be running...")
-
-	// Add a handler for the instance state change event
-	err = ec2.NewInstanceExistsWaiter(ec2Svc).Wait(ctx, &ec2.DescribeInstancesInput{
+	spin.Title("Waiting for instance to be running...")
+	err = ec2.NewInstanceStatusOkWaiter(ec2Svc).Wait(ctx, &ec2.DescribeInstanceStatusInput{
 		InstanceIds: []string{*createdInstance.InstanceId},
-	}, time.Minute*2)
+	}, time.Minute*5)
 	if err != nil {
-		return fmt.Errorf("failed to wait for instance to be created: %w", err)
+		return instance, fmt.Errorf("failed to wait for instance to be created: %w", err)
 	}
 
-	fmt.Println("OK.")
-	fmt.Println("Waiting for instance to join tailnet...")
-
-	// Call internal.GetNodes periodically and search for the instance
-	// If the instance is found, print the command to use it as an exit node
-
-	timeout := time.Now().Add(3 * time.Minute)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("operation canceled: %w", ctx.Err())
-		default:
-		}
-
-		nodes, deviceErr := apiClient.Devices().List(ctx)
-		if deviceErr != nil {
-			return fmt.Errorf("failed to get devices: %w", deviceErr)
-		}
-
-		for _, node := range nodes {
-			if node.Hostname == nodeName {
-				goto found
-			}
-		}
-
-		// Timeouts after 2 minutes
-		if time.Now().After(timeout) {
-			return errors.New("timeout waiting for instance to join tailnet")
-		}
-
-		time.Sleep(2 * time.Second)
-	}
-
-found:
-	// Stop the loading spinner
-	if !nonInteractive {
-		s.Stop()
-		wg.Wait()
-	}
-	// Get public IP address of created instance
 	describeInput := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{*createdInstance.InstanceId},
 	}
 
 	describeResult, err := ec2Svc.DescribeInstances(ctx, describeInput)
 	if err != nil {
-		return fmt.Errorf("failed to describe EC2 instance: %w", err)
+		return instance, fmt.Errorf("failed to describe EC2 instance: %w", err)
 	}
 
 	if len(describeResult.Reservations) == 0 {
-		return errors.New("no reservations found")
+		return instance, errors.New("no reservations found")
 	}
 
 	reservation := describeResult.Reservations[0]
 	if len(reservation.Instances) == 0 {
-		return errors.New("no instances found")
+		return instance, errors.New("no instances found")
 	}
 
-	instance := reservation.Instances[0]
-	if instance.PublicIpAddress == nil {
-		return errors.New("no public IP address found")
+	instance1 := reservation.Instances[0]
+	if instance1.PublicIpAddress == nil {
+		return instance, errors.New("no public IP address found")
 	}
 
-	fmt.Printf("Node %s joined tailnet.\n", nodeName)
-	fmt.Println("Public IP address:", *instance.PublicIpAddress)
-	fmt.Println("Planned termination time:", time.Now().Add(duration).Format(time.RFC3339))
+	instance.Name = nodeName
+	instance.InstanceID = *createdInstance.InstanceId
+	instance.IP = *instance1.PublicIpAddress
 
-	if connect {
-		fmt.Println()
-		args := []string{nodeName}
-		err = app.Connect(ctx, args)
-		if err != nil {
-			return fmt.Errorf("failed to connect to node: %w", err)
-		}
+	return instance, nil
+}
+
+func installTailScale(ctx context.Context, cfg aws.Config, key string, nodeName string, instanceID string, spin *spinner.Spinner) error {
+	ssmSvc := ssm.NewFromConfig(cfg)
+
+	input := &ssm.SendCommandInput{
+		InstanceIds:  []string{instanceID},
+		DocumentName: aws.String("AWS-RunShellScript"),
+		Parameters: map[string][]string{
+			"commands": {
+				"echo 'Installing Tailscale...'",
+				"curl -fsSL https://tailscale.com/install.sh | sh",
+				"echo 'Starting Tailscale...'",
+				"sudo tailscale up --auth-key=" + key + " --hostname=" + nodeName + " --advertise-exit-node --ssh",
+				"echo 'Tailscale installation and configuration completed.'",
+			},
+		},
 	}
+
+	spin.Title("Installing Tailscale...")
+	output, err := ssmSvc.SendCommand(ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed to send SSM command: %w", err)
+	}
+
+	commandID := *output.Command.CommandId
+	waiter := ssm.NewCommandExecutedWaiter(ssmSvc)
+	waitErr := waiter.Wait(ctx, &ssm.GetCommandInvocationInput{
+		CommandId:  aws.String(commandID),
+		InstanceId: aws.String(instanceID),
+	}, 5*time.Minute)
+	if waitErr != nil {
+		return fmt.Errorf("failed to wait for SSM command execution: %w", waitErr)
+	}
+
+	invocationOutput, err := ssmSvc.GetCommandInvocation(ctx, &ssm.GetCommandInvocationInput{
+		CommandId:  aws.String(commandID),
+		InstanceId: aws.String(instanceID),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get SSM command invocation: %w", err)
+	}
+
+	if invocationOutput.Status != ssmTypes.CommandInvocationStatusSuccess {
+		return fmt.Errorf("SSM command failed with status: %s, output: %s", invocationOutput.Status, aws.ToString(invocationOutput.StandardErrorContent))
+	}
+
 	return nil
 }

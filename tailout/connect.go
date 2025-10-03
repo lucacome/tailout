@@ -4,16 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/netip"
 	"net/url"
 	"slices"
 
+	"github.com/charmbracelet/huh"
 	"github.com/lucacome/tailout/internal"
-	"github.com/manifoldco/promptui"
-	tslocal "tailscale.com/client/local"
 	tsapi "tailscale.com/client/tailscale/v2"
-	"tailscale.com/ipn"
-	"tailscale.com/tailcfg"
 )
 
 func (app *App) Connect(ctx context.Context, args []string) error {
@@ -45,51 +41,50 @@ func (app *App) Connect(ctx context.Context, args []string) error {
 		i := slices.IndexFunc(tailoutDevices, func(e tsapi.Device) bool {
 			return e.Hostname == nodeConnect
 		})
+		if i == -1 {
+			return fmt.Errorf("node %s not found", nodeConnect)
+		}
 		deviceToConnectTo = tailoutDevices[i]
 	case !nonInteractive:
 		if len(tailoutDevices) == 0 {
 			return errors.New("no tailout node found in your tailnet")
 		}
 
-		// Use promptui to select a node
-		prompt := promptui.Select{
-			Label: "Select a node",
-			Items: tailoutDevices,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}",
-				Active:   "{{ .Hostname | cyan }}",
-				Inactive: "{{ .Hostname }}",
-				Selected: "{{ .Hostname | yellow }}",
-			},
+		// Create options for huh select
+		options := make([]huh.Option[int], len(tailoutDevices))
+		for i, device := range tailoutDevices {
+			// Display hostname and IP address
+			label := fmt.Sprintf("%s (%s)", device.Hostname, device.Addresses[0])
+			options[i] = huh.NewOption(label, i)
 		}
 
-		idx, _, promptErr := prompt.Run()
-		if promptErr != nil {
-			return fmt.Errorf("failed to select node: %w", promptErr)
+		var selectedIndex int
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[int]().
+					Title("Select a node to connect to").
+					Options(options...).
+					Value(&selectedIndex),
+			),
+		)
+
+		err := form.RunWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to select node: %w", err)
 		}
 
-		deviceToConnectTo = tailoutDevices[idx]
-		nodeConnect = deviceToConnectTo.ID
+		deviceToConnectTo = tailoutDevices[selectedIndex]
+		nodeConnect = deviceToConnectTo.NodeID
 	default:
 		return errors.New("no node name provided")
 	}
 
-	var localClient tslocal.Client
-
-	prefs := ipn.NewPrefs()
-
-	prefs.ExitNodeID = tailcfg.StableNodeID(nodeConnect)
-	prefs.ExitNodeIP = netip.MustParseAddr(deviceToConnectTo.Addresses[0])
-
-	_, err = localClient.EditPrefs(ctx, &ipn.MaskedPrefs{
-		Prefs:         *prefs,
-		ExitNodeIDSet: true,
-		ExitNodeIPSet: true,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to run tailscale up command: %w", err)
+	errUpdate := internal.UpdateExitNode(ctx, apiClient, nodeConnect)
+	if errUpdate != nil {
+		return fmt.Errorf("failed to connect to exit node: %w", errUpdate)
 	}
 
-	fmt.Println("Connected.")
+	fmt.Printf("Connected to node %s (%s) via Tailscale.\n", deviceToConnectTo.Hostname, deviceToConnectTo.Addresses[0])
+
 	return nil
 }
