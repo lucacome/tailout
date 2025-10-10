@@ -158,8 +158,6 @@ func UpdateExitNode(ctx context.Context, c *tsapi.Client, id string) error {
 		return fmt.Errorf("failed to get prefs: %w", err)
 	}
 
-	fmt.Println(prefs.Pretty())
-
 	if id != "" {
 		fmt.Printf("Setting exit node to %s...\n", id)
 		prefs.ExitNodeID = tailcfg.StableNodeID(id)
@@ -167,7 +165,7 @@ func UpdateExitNode(ctx context.Context, c *tsapi.Client, id string) error {
 		fmt.Println("Clearing exit node...")
 		prefs.ClearExitNode()
 	}
-	updPrefs, err := localClient.EditPrefs(ctx, &ipn.MaskedPrefs{
+	_, err = localClient.EditPrefs(ctx, &ipn.MaskedPrefs{
 		Prefs:         *prefs,
 		ExitNodeIDSet: true,
 	})
@@ -175,25 +173,13 @@ func UpdateExitNode(ctx context.Context, c *tsapi.Client, id string) error {
 		return fmt.Errorf("failed to set/unset exit node: %w", err)
 	}
 
-	fmt.Println(updPrefs.Pretty())
-
 	status, err = localClient.Status(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get tailscale status: %w", err)
 	}
 
-	if id != "" {
-		if status.ExitNodeStatus != nil && !status.ExitNodeStatus.Online {
-			return errors.New("the exit node is not reachable")
-		} else {
-			// Show health messages as warnings
-			if len(status.Health) > 0 {
-				fmt.Println("Health warnings:")
-				for _, health := range status.Health {
-					fmt.Printf("  - %s\n", health)
-				}
-			}
-		}
+	if status.ExitNodeStatus != nil && !status.ExitNodeStatus.Online {
+		return errors.New("the exit node is not reachable")
 	}
 
 	return nil
