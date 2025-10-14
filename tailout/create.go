@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	ssmTypes "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go"
 
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/lucacome/tailout/internal"
@@ -115,7 +116,7 @@ func (app *App) Create(ctx context.Context) error {
 			return createErr
 		}
 		if instance.InstanceID == "" {
-			return errors.New("instance creation aborted")
+			return fmt.Errorf("instance creation aborted")
 		}
 		nodeName = instance.Name
 		publicIPAddress = instance.IP
@@ -281,6 +282,11 @@ func createInstance(ctx context.Context, cfg aws.Config, runInput *ec2.RunInstan
 	// Run the EC2 instance
 	runResult, runErr := ec2Svc.RunInstances(ctx, runInput)
 	if runErr != nil {
+		var dryRunErr *smithy.GenericAPIError
+		if errors.As(runErr, &dryRunErr) && dryRunErr.Code == "DryRunOperation" {
+			fmt.Println("Dry run successful. Instance can be created.")
+			return instance, nil
+		}
 		return instance, fmt.Errorf("failed to create EC2 instance: %w", runErr)
 	}
 
