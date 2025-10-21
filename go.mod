@@ -14,14 +14,13 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
-	tailscale.com v1.88.3
+	tailscale.com v1.90.0
 	tailscale.com/client/tailscale/v2 v2.3.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
-	github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.16 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.9 // indirect
