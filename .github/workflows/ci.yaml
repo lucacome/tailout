@@ -64,6 +64,8 @@ jobs:
       id-token: write
       attestations: write
     needs: checks
+    outputs:
+      cache-key: ${{ steps.restore-cache.outputs.cache-primary-key }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -77,6 +79,13 @@ jobs:
           cache-dependency-path: |
             go.sum
             .github/.cache/buster-for-binary
+
+      - name: Restore Artifacts Cache
+        id: restore-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ github.workspace }}/dist
+          key: tailout-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Create/Update Draft
         uses: lucacome/draft-release@fd099feb33710d1fa27b915a08a7acd6a1fb7fd2 # v2.0.0
@@ -122,10 +131,11 @@ jobs:
         run: ./dist/tailout_linux_amd64_v1/tailout version
 
       - name: Cache Artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: always()
         with:
           path: ${{ github.workspace }}/dist
-          key: tailout-${{ github.run_id }}-${{ github.run_number }}
+          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
 
   build-and-push-image:
     runs-on: ubuntu-24.04
@@ -154,10 +164,10 @@ jobs:
           driver-opts: network=host
 
       - name: Fetch Cached Artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ github.workspace }}/dist
-          key: tailout-${{ github.run_id }}-${{ github.run_number }}
+          key: ${{ needs.binary.outputs.cache-key }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
