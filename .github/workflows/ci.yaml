@@ -42,6 +42,9 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: stable
+          cache-dependency-path: |
+            go.sum
+            .github/.cache/buster-for-checks
 
       - name: Generate templ code
         uses: capthiron/templ-generator-action@f1f7b5d0b261eccff32fa3fc17cf563d993fee94 # v1
@@ -71,6 +74,9 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: stable
+          cache-dependency-path: |
+            go.sum
+            .github/.cache/buster-for-binary
 
       - name: Create/Update Draft
         uses: lucacome/draft-release@fd099feb33710d1fa27b915a08a7acd6a1fb7fd2 # v2.0.0
@@ -92,7 +98,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
-          version: latest
+          version: v2.12.5 # renovate: datasource=github-tags depName=goreleaser/goreleaser
           args: ${{ github.ref_type == 'tag' && 'release' || 'build --snapshot' }} --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
