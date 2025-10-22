@@ -24,6 +24,8 @@ import (
 	tsapi "tailscale.com/client/tailscale/v2"
 )
 
+var ErrUserAborted = errors.New("user aborted instance creation")
+
 func (app *App) Create(ctx context.Context) error {
 	nonInteractive := app.Config.NonInteractive
 	region := app.Config.Region
@@ -101,6 +103,10 @@ func (app *App) Create(ctx context.Context) error {
 
 	runInput, errPrep := prepareInstance(ctx, cfg, aws.Bool(dryRun))
 	if errPrep != nil {
+		if errors.Is(errPrep, ErrUserAborted) {
+			fmt.Println("Instance creation aborted.")
+			return nil
+		}
 		return fmt.Errorf("failed to prepare instance: %w", errPrep)
 	}
 	if runInput == nil {
@@ -113,12 +119,12 @@ func (app *App) Create(ctx context.Context) error {
 	var instanceID string
 	s := spinner.New().Type(spinner.Dots).Title("Creating instance...")
 	errSpin := s.Context(ctx).ActionWithErr(func(context.Context) error {
-		instance, createErr := createInstance(ctx, cfg, runInput, key.Key, s)
+		instance, createErr := createInstance(ctx, cfg, runInput, s)
 		if createErr != nil {
 			return createErr
 		}
 		if instance.InstanceID == "" {
-			return fmt.Errorf("instance creation aborted")
+			return errors.New("instance creation aborted")
 		}
 		instanceID = instance.InstanceID
 		nodeName = instance.Name
@@ -289,12 +295,12 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(10) + ` minutes`
 	}
 
 	if !result {
-		return nil, nil
+		return nil, ErrUserAborted
 	}
 	return runInput, nil
 }
 
-func createInstance(ctx context.Context, cfg aws.Config, runInput *ec2.RunInstancesInput, key string, spin *spinner.Spinner) (instance instance, err error) {
+func createInstance(ctx context.Context, cfg aws.Config, runInput *ec2.RunInstancesInput, spin *spinner.Spinner) (instance instance, err error) {
 	ec2Svc := ec2.NewFromConfig(cfg)
 
 	// Run the EC2 instance

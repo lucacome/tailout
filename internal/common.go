@@ -45,7 +45,7 @@ func SelectRegion(ctx context.Context) (string, error) {
 	regionNames, err := GetRegions(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
-			return "", ctx.Err()
+			return "", fmt.Errorf("operation canceled: %w", ctx.Err())
 		}
 		return "", fmt.Errorf("failed to retrieve regions: %w", err)
 	}
@@ -66,15 +66,10 @@ func SelectRegion(ctx context.Context) (string, error) {
 
 	err = form.RunWithContext(ctx)
 	if err != nil {
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		default:
-			if err.Error() == "^C" {
-				return "", context.Canceled
-			}
-			return "", fmt.Errorf("failed to select region: %w", err)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return "", fmt.Errorf("region selection canceled: %w", ctxErr)
 		}
+		return "", fmt.Errorf("failed to select region: %w", err)
 	}
 
 	return selectedRegion, nil
@@ -135,9 +130,9 @@ func UpdateExitNode(ctx context.Context, c *tsapi.Client, id string) error {
 	var currentExitNodeName string
 	if status.ExitNodeStatus != nil {
 		// Get all devices to find the current exit node name
-		devices, err := c.Devices().List(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get devices: %w", err)
+		devices, errList := c.Devices().List(ctx)
+		if errList != nil {
+			return fmt.Errorf("failed to get devices: %w", errList)
 		}
 
 		// Find the device that matches the current exit node ID

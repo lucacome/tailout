@@ -77,9 +77,9 @@ func (app *App) Stop(ctx context.Context, args []string) error {
 			return nil
 		}
 
-		nodesToStop = make([]tsapi.Device, len(selectedIndices))
-		for i, idx := range selectedIndices {
-			nodesToStop[i] = tailoutNodes[idx]
+		nodesToStop = make([]tsapi.Device, 0, len(selectedIndices))
+		for _, idx := range selectedIndices {
+			nodesToStop = append(nodesToStop, tailoutNodes[idx])
 		}
 	} else {
 		if !stopAll {
