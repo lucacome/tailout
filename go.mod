@@ -3,7 +3,7 @@ module github.com/lucacome/tailout
 go 1.25.3
 
 require (
-	github.com/a-h/templ v0.3.943
+	github.com/a-h/templ v0.3.960
 	github.com/adhocore/chin v1.1.0
 	github.com/aws/aws-sdk-go-v2 v1.39.3
 	github.com/aws/aws-sdk-go-v2/config v1.31.13
