@@ -52,7 +52,7 @@ jobs:
           commit: "false"
           setup-go: "false"
           directory: "internal/views"
-          templ-version: v0.3.943 # renovate: datasource=github-tags depName=a-h/templ
+          templ-version: v0.3.960 # renovate: datasource=github-tags depName=a-h/templ
 
       - name: Check if templ code is up to date
         run: git diff --exit-code
