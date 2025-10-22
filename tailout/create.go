@@ -101,7 +101,7 @@ func (app *App) Create(ctx context.Context) error {
 		return fmt.Errorf("unable to load SDK config: %w", err)
 	}
 
-	runInput, errPrep := prepareInstance(ctx, cfg, aws.Bool(dryRun))
+	runInput, errPrep := prepareInstance(ctx, cfg, aws.Bool(dryRun), strconv.Itoa(durationMinutes))
 	if errPrep != nil {
 		if errors.Is(errPrep, ErrUserAborted) {
 			fmt.Println("Instance creation aborted.")
@@ -187,7 +187,7 @@ type instance struct {
 	IP         string
 }
 
-func prepareInstance(ctx context.Context, cfg aws.Config, dryRun *bool) (instance *ec2.RunInstancesInput, err error) {
+func prepareInstance(ctx context.Context, cfg aws.Config, dryRun *bool, shutdownDuration string) (instance *ec2.RunInstancesInput, err error) {
 	ec2Svc := ec2.NewFromConfig(cfg)
 
 	// DescribeImages to get the latest Amazon Linux AMI
@@ -240,7 +240,7 @@ func prepareInstance(ctx context.Context, cfg aws.Config, dryRun *bool) (instanc
 echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf
 echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p /etc/sysctl.conf
-sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(10) + ` minutes`
+sudo echo "sudo shutdown" | at now + ` + shutdownDuration + ` minutes`
 
 	// Encode the string in base64
 	userDataScriptBase64 := base64.StdEncoding.EncodeToString([]byte(userDataScript))
@@ -287,7 +287,7 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(10) + ` minutes`
 - Region: %s
 - Auto shutdown after: %s
 - Network: default VPC / Subnet / Security group of the region
-	`, *identity.Account, imageID, imageName, imageOwner, imageArchitecture, types.InstanceTypeT3aMicro, cfg.Region, "TODO")
+	`, *identity.Account, imageID, imageName, imageOwner, imageArchitecture, types.InstanceTypeT3aMicro, cfg.Region, shutdownDuration)
 
 	result, promptErr := internal.PromptYesNo(ctx, "Do you want to create this instance?")
 	if promptErr != nil {

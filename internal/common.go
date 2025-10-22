@@ -50,10 +50,6 @@ func SelectRegion(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to retrieve regions: %w", err)
 	}
 
-	sort.Slice(regionNames, func(i, j int) bool {
-		return regionNames[i] < regionNames[j]
-	})
-
 	var selectedRegion string
 	form := huh.NewForm(
 		huh.NewGroup(
@@ -89,6 +85,9 @@ func PromptYesNo(ctx context.Context, question string) (bool, error) {
 
 	err := form.RunWithContext(ctx)
 	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return false, fmt.Errorf("prompt canceled: %w", ctxErr)
+		}
 		return false, fmt.Errorf("failed to prompt for yes/no: %w", err)
 	}
 
