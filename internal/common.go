@@ -171,6 +171,9 @@ func UpdateExitNode(ctx context.Context, c *tsapi.Client, id string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get tailscale status: %w", err)
 	}
+	if id != "" && (status.ExitNodeStatus == nil || status.ExitNodeStatus.ID != tailcfg.StableNodeID(id)) {
+		return errors.New("failed to set the exit node")
+	}
 
 	if status.ExitNodeStatus != nil && !status.ExitNodeStatus.Online {
 		return errors.New("the exit node is not reachable")
