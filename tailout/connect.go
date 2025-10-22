@@ -54,8 +54,13 @@ func (app *App) Connect(ctx context.Context, args []string) error {
 		// Create options for huh select
 		options := make([]huh.Option[int], len(tailoutDevices))
 		for i, device := range tailoutDevices {
+			// Get IP address if available
+			addr := "no IP"
+			if len(device.Addresses) > 0 {
+				addr = device.Addresses[0]
+			}
 			// Display hostname and IP address
-			label := fmt.Sprintf("%s (%s)", device.Hostname, device.Addresses[0])
+			label := fmt.Sprintf("%s (%s)", device.Hostname, addr)
 			options[i] = huh.NewOption(label, i)
 		}
 
@@ -85,7 +90,12 @@ func (app *App) Connect(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to connect to exit node: %w", errUpdate)
 	}
 
-	fmt.Printf("Connected to node %s (%s) via Tailscale.\n", deviceToConnectTo.Hostname, deviceToConnectTo.Addresses[0])
+	// Get IP address if available
+	addr := "no IP"
+	if len(deviceToConnectTo.Addresses) > 0 {
+		addr = deviceToConnectTo.Addresses[0]
+	}
+	fmt.Printf("Connected to node %s (%s) via Tailscale.\n", deviceToConnectTo.Hostname, addr)
 
 	return nil
 }
