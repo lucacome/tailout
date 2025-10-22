@@ -276,7 +276,7 @@ sudo echo "sudo shutdown" | at now + ` + strconv.Itoa(10) + ` minutes`
 
 	identity, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
-		return instance, fmt.Errorf("failed to get account ID: %w", err)
+		return nil, fmt.Errorf("failed to get account ID: %w", err)
 	}
 
 	fmt.Printf(`Creating tailout node in AWS with the following parameters:

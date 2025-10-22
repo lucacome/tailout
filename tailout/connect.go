@@ -45,6 +45,7 @@ func (app *App) Connect(ctx context.Context, args []string) error {
 			return fmt.Errorf("node %s not found", nodeConnect)
 		}
 		deviceToConnectTo = tailoutDevices[i]
+		nodeConnect = deviceToConnectTo.NodeID
 	case !nonInteractive:
 		if len(tailoutDevices) == 0 {
 			return errors.New("no tailout node found in your tailnet")
