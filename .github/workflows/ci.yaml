@@ -12,7 +12,6 @@ on:
 
 env:
   # tailout environment variables
-  TAILOUT_REGION: eu-west-3
   TAILOUT_NON_INTERACTIVE: "true"
   TAILOUT_CREATE_CONNECT: "true"
   TAILOUT_CREATE_SHUTDOWN: 5m
@@ -242,59 +241,45 @@ jobs:
     needs: binary
     permissions:
       id-token: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - first_command: "tailout init"
-          - first_command: "tailout create"
-            second_command: "tailout status"
-            third_command: "tailout disconnect"
-          - first_command: "tailout create"
-            second_command: "tailout disconnect"
-            third_command: "tailout status"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Setup environment
-        uses: ./.github/actions/setup
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
-          region: ${{ env.TAILOUT_REGION }}
-          role_arn: ${{ secrets.AWS_GITHUB_ACTIONS_TAILOUT_ROLE_ARN }}
-          tailscale_oauth_client_id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          tailscale_oauth_client_secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
-      - name: First command
-        run: ${{ matrix.first_command }}
-      - name: Second command
-        if: ${{ matrix.second_command != '' }}
-        run: ${{ matrix.second_command }}
-      - name: Third command
-        if: ${{ matrix.third_command != '' }}
-        run: ${{ matrix.third_command }}
-      # TODO: check if the public IP address matches the one from the new instance
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_TAILOUT_ROLE_ARN }}
+          role-session-name: tailout-${{ github.job }}
+          aws-region: us-west-1
 
-  # TODO: find a better concurrency pattern
-  cleanup:
-    runs-on: ubuntu-24.04
-    if: ${{ github.event.repository.fork == false && github.actor != 'renovate[bot]' }}
-    needs: e2e-tests
-    concurrency:
-      group: cleanup
-      cancel-in-progress: true
-    permissions:
-      id-token: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Setup environment
-        uses: ./.github/actions/setup
+      - name: Connect runner to tailscale
+        uses: tailscale/github-action@aa604318b61e5b25107287e0d07db6a08b3e72c0 # v4.0.2
         with:
-          region: ${{ env.TAILOUT_REGION }}
-          role_arn: ${{ secrets.AWS_GITHUB_ACTIONS_TAILOUT_ROLE_ARN }}
-          tailscale_oauth_client_id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          tailscale_oauth_client_secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
-      - name: Cleanup
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          version: v1.88.3 # renovate: datasource=github-tags depName=tailscale/tailscale
+          tags: tag:github-actions-runner
+          args: --operator=runner
+
+      - name: Fetch Cached Artifacts
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ github.workspace }}/dist
+          key: ${{ needs.binary.outputs.cache-key }}
+
+      - name: Move binary to /usr/local/bin
+        run: sudo mv dist/tailout_linux_amd64*/tailout /usr/local/bin/
+        shell: bash
+
+      - name: Run init
+        run: tailout init
+
+      - name: Create instance and test workflow
+        run: |
+          tailout create
+          tailout status
+          tailout disconnect
+          tailout status
+
+        # TODO: check if the public IP address matches the one from the new instance
+
+      - name: Cleanup instances
         run: tailout stop --all
-      # TODO: Add cleanup for github nodes as well
+        if: always()
