@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -12,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/charmbracelet/huh"
 	"github.com/lucacome/tailout/internal"
 	tsapi "tailscale.com/client/tailscale/v2"
 )
@@ -46,17 +45,41 @@ func (app *App) Stop(ctx context.Context, args []string) error {
 	}
 
 	if len(args) == 0 && !nonInteractive && !stopAll {
-		// Create a fuzzy finder selector with the tailout nodes
-		idx, err := fuzzyfinder.FindMulti(tailoutNodes, func(i int) string {
-			return tailoutNodes[i].Hostname
-		})
-		if err != nil {
-			return fmt.Errorf("failed to find node: %w", err)
+		// Create options for multi-select with huh
+		options := make([]huh.Option[int], len(tailoutNodes))
+		for i, node := range tailoutNodes {
+			addr := ""
+			if len(node.Addresses) > 0 {
+				addr = node.Addresses[0]
+			}
+			label := fmt.Sprintf("%s (%s)", node.Hostname, addr)
+			options[i] = huh.NewOption(label, i)
 		}
 
-		nodesToStop = []tsapi.Device{}
-		for _, i := range idx {
-			nodesToStop = append(nodesToStop, tailoutNodes[i])
+		var selectedIndices []int
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewMultiSelect[int]().
+					Title("Select nodes to stop").
+					Description("Use space to select/deselect, enter to confirm").
+					Options(options...).
+					Value(&selectedIndices),
+			),
+		)
+
+		err := form.RunWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to select nodes: %w", err)
+		}
+
+		if len(selectedIndices) == 0 {
+			fmt.Println("No nodes selected.")
+			return nil
+		}
+
+		nodesToStop = make([]tsapi.Device, 0, len(selectedIndices))
+		for _, idx := range selectedIndices {
+			nodesToStop = append(nodesToStop, tailoutNodes[idx])
 		}
 	} else {
 		if !stopAll {
@@ -72,13 +95,18 @@ func (app *App) Stop(ctx context.Context, args []string) error {
 		}
 	}
 
+	if len(nodesToStop) == 0 {
+		fmt.Println("No nodes to stop.")
+		return nil
+	}
+
 	if !nonInteractive {
 		fmt.Println("The following nodes will be stopped:")
 		for _, node := range nodesToStop {
 			fmt.Println("-", node.Hostname)
 		}
 
-		result, err := internal.PromptYesNo("Are you sure you want to stop these Nodes?")
+		result, err := internal.PromptYesNo(ctx, "Are you sure you want to stop these Nodes?")
 		if err != nil {
 			return fmt.Errorf("failed to prompt for confirmation: %w", err)
 		}
@@ -112,13 +140,12 @@ func (app *App) Stop(ctx context.Context, args []string) error {
 		// Create a session to share configuration, and load external configuration.
 		cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 		if err != nil {
-			log.Fatalf("unable to load SDK config, %v", err)
+			return fmt.Errorf("unable to load SDK config: %w", err)
 		}
 
 		ec2Svc := ec2.NewFromConfig(cfg)
 
 		// Extract the instance ID from the Node name with a regex
-
 		instanceID := regexp.MustCompile(`i\-[a-z0-9]{17}$`).FindString(node.Hostname)
 
 		_, err = ec2Svc.TerminateInstances(ctx, &ec2.TerminateInstancesInput{

@@ -2,39 +2,29 @@ package tailout
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/netip"
+	"net/url"
 
-	tslocal "tailscale.com/client/local"
-	"tailscale.com/ipn"
+	"github.com/lucacome/tailout/internal"
+	tsapi "tailscale.com/client/tailscale/v2"
 )
 
 func (app *App) Disconnect(ctx context.Context) error {
-	var localClient tslocal.Client
-	prefs, err := localClient.GetPrefs(ctx)
+	baseURL, err := url.Parse(app.Config.Tailscale.BaseURL)
 	if err != nil {
-		return fmt.Errorf("failed to get prefs: %w", err)
+		return fmt.Errorf("failed to parse base URL: %w", err)
+	}
+	apiClient := &tsapi.Client{
+		APIKey:  app.Config.Tailscale.APIKey,
+		Tailnet: app.Config.Tailscale.Tailnet,
+		BaseURL: baseURL,
 	}
 
-	if prefs.ExitNodeID == "" {
-		return errors.New("not connected to an exit node")
+	errUpdate := internal.UpdateExitNode(ctx, apiClient, "")
+	if errUpdate != nil {
+		return fmt.Errorf("failed to disconnect from exit node: %w", errUpdate)
 	}
 
-	disconnectPrefs := ipn.NewPrefs()
-
-	disconnectPrefs.ExitNodeID = ""
-	disconnectPrefs.ExitNodeIP = netip.Addr{}
-
-	_, err = localClient.EditPrefs(ctx, &ipn.MaskedPrefs{
-		Prefs:         *disconnectPrefs,
-		ExitNodeIDSet: true,
-		ExitNodeIPSet: true,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to run tailscale up command: %w", err)
-	}
-
-	fmt.Println("Disconnected.")
+	fmt.Println("Disconnected from exit node.")
 	return nil
 }

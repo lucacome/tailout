@@ -105,7 +105,7 @@ Your new acl document will look like this:
 
 	if !dryRun {
 		if !nonInteractive {
-			result, promptErr := internal.PromptYesNo("Do you want to continue?")
+			result, promptErr := internal.PromptYesNo(ctx, "Do you want to continue?")
 			if promptErr != nil {
 				return fmt.Errorf("failed to prompt for confirmation: %w", promptErr)
 			}
