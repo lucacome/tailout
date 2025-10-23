@@ -271,12 +271,17 @@ jobs:
       - name: Run init
         run: tailout init
 
-      - name: Create instance and test workflow
-        run: |
-          tailout create
-          tailout status
-          tailout disconnect
-          tailout status
+      - name: Create instance
+        run: tailout create
+
+      - name: Check instance status
+        run: tailout status
+
+      - name: Disconnect instance
+        run: tailout disconnect
+
+      - name: Check instance status after disconnect
+        run: tailout status
 
         # TODO: check if the public IP address matches the one from the new instance
 
