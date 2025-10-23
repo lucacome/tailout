@@ -254,7 +254,7 @@ jobs:
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
-          version: v1.88.3 # renovate: datasource=github-tags depName=tailscale/tailscale
+          version: 1.88.3 # renovate: datasource=github-tags depName=tailscale/tailscale
           tags: tag:github-actions-runner
           args: --operator=runner
 
