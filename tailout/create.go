@@ -24,7 +24,10 @@ import (
 	tsapi "tailscale.com/client/tailscale/v2"
 )
 
-var ErrUserAborted = errors.New("user aborted instance creation")
+var (
+	ErrUserAborted = errors.New("user aborted instance creation")
+	ErrDryRun      = errors.New("dry run successful")
+)
 
 func (app *App) Create(ctx context.Context) error {
 	nonInteractive := app.Config.NonInteractive
@@ -40,7 +43,6 @@ func (app *App) Create(ctx context.Context) error {
 
 	apiClient := &tsapi.Client{
 		APIKey:  app.Config.Tailscale.APIKey,
-		Tailnet: app.Config.Tailscale.Tailnet,
 		BaseURL: baseURL,
 	}
 
@@ -104,13 +106,13 @@ func (app *App) Create(ctx context.Context) error {
 	runInput, errPrep := prepareInstance(ctx, cfg, aws.Bool(dryRun), strconv.Itoa(durationMinutes))
 	if errPrep != nil {
 		if errors.Is(errPrep, ErrUserAborted) {
-			fmt.Println("Instance creation aborted.")
+			fmt.Println("instance creation aborted.")
 			return nil
 		}
 		return fmt.Errorf("failed to prepare instance: %w", errPrep)
 	}
 	if runInput == nil {
-		fmt.Println("Instance creation aborted.")
+		fmt.Println("no user input provided, aborting instance creation")
 		return nil
 	}
 
@@ -123,8 +125,11 @@ func (app *App) Create(ctx context.Context) error {
 		if createErr != nil {
 			return createErr
 		}
+		if dryRun {
+			return ErrDryRun
+		}
 		if instance.InstanceID == "" {
-			return errors.New("instance creation aborted")
+			return errors.New("no instance ID returned")
 		}
 		instanceID = instance.InstanceID
 		nodeName = instance.Name
@@ -132,10 +137,12 @@ func (app *App) Create(ctx context.Context) error {
 		return nil
 	}).Run()
 	if errSpin != nil {
+		if errors.Is(errSpin, ErrDryRun) {
+			fmt.Println("Dry run successful. Instance can be created.")
+			return nil
+		}
 		return fmt.Errorf("failed to create instance: %w", errSpin)
 	}
-
-	// If dry run, exit here?
 
 	st := spinner.New().Type(spinner.Dots).Title("Installing Tailscale...")
 	errSpint := st.Context(ctx).ActionWithErr(func(context.Context) error {
@@ -308,7 +315,6 @@ func createInstance(ctx context.Context, cfg aws.Config, runInput *ec2.RunInstan
 	if runErr != nil {
 		var dryRunErr *smithy.GenericAPIError
 		if errors.As(runErr, &dryRunErr) && dryRunErr.Code == "DryRunOperation" {
-			fmt.Println("Dry run successful. Instance can be created.")
 			return instance, nil
 		}
 		return instance, fmt.Errorf("failed to create EC2 instance: %w", runErr)
