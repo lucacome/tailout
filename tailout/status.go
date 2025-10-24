@@ -20,21 +20,20 @@ func (app *App) Status(ctx context.Context) error {
 		return fmt.Errorf("failed to parse base URL: %w", err)
 	}
 
+	var localClient tslocal.Client
+	status, err := localClient.Status(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tailscale preferences: %w", err)
+	}
+
 	client := &tsapi.Client{
 		APIKey:  app.Config.Tailscale.APIKey,
-		Tailnet: app.Config.Tailscale.Tailnet,
 		BaseURL: baseURL,
 	}
 
 	nodes, err := internal.GetActiveNodes(ctx, client)
 	if err != nil {
 		return fmt.Errorf("failed to get active nodes: %w", err)
-	}
-
-	var localClient tslocal.Client
-	status, err := localClient.Status(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get tailscale preferences: %w", err)
 	}
 
 	var currentNode tsapi.Device

@@ -21,7 +21,6 @@ func (app *App) Init(ctx context.Context) error {
 
 	apiClient := &tsapi.Client{
 		APIKey:  app.Config.Tailscale.APIKey,
-		Tailnet: app.Config.Tailscale.Tailnet,
 		BaseURL: baseURL,
 	}
 

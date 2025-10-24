@@ -14,9 +14,9 @@ func (app *App) Disconnect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse base URL: %w", err)
 	}
+
 	apiClient := &tsapi.Client{
 		APIKey:  app.Config.Tailscale.APIKey,
-		Tailnet: app.Config.Tailscale.Tailnet,
 		BaseURL: baseURL,
 	}
 

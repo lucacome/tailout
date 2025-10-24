@@ -36,7 +36,6 @@ Go to your [Tailscale API key settings](https://login.tailscale.com/admin/settin
   ```yaml
   tailscale:
     api_key: tskey-api-xxx-xxx
-    tailnet: <your tailnet name>
   ```
 
 - Run `tailout init`, review the changes that will be done to your policy and accept
@@ -90,7 +89,6 @@ For exemple, you could have this content in `/etc/tailout/config.yml`:
 ```yaml
 tailscale:
   api_key: tskey-api-xxx-xxx
-  tailnet: <your tailnet name>
 region: eu-west-3
 create:
   shutdown: 15m
