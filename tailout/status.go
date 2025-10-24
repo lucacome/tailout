@@ -23,7 +23,7 @@ func (app *App) Status(ctx context.Context) error {
 	var localClient tslocal.Client
 	status, err := localClient.Status(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get tailscale preferences: %w", err)
+		return fmt.Errorf("failed to get tailscale status: %w", err)
 	}
 
 	client := &tsapi.Client{
