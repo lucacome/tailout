@@ -10,13 +10,6 @@ on:
     branches:
       - main
 
-env:
-  # tailout environment variables
-  TAILOUT_NON_INTERACTIVE: "true"
-  TAILOUT_CREATE_CONNECT: "true"
-  TAILOUT_CREATE_SHUTDOWN: 5m
-  TAILOUT_TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
-
 defaults:
   run:
     shell: bash
@@ -240,13 +233,20 @@ jobs:
     needs: binary
     permissions:
       id-token: write
+    env:
+      # tailout environment variables
+      TAILOUT_REGION: us-west-1
+      TAILOUT_NON_INTERACTIVE: "true"
+      TAILOUT_CREATE_CONNECT: "true"
+      TAILOUT_CREATE_SHUTDOWN: 5m
+      TAILOUT_TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_TAILOUT_ROLE_ARN }}
           role-session-name: tailout-${{ github.job }}
-          aws-region: us-west-1
+          aws-region: ${{ env.TAILOUT_REGION }}
 
       - name: Connect runner to tailscale
         uses: tailscale/github-action@aa604318b61e5b25107287e0d07db6a08b3e72c0 # v4.0.2
