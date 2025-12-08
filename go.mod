@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.275.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.4
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.2
-	github.com/aws/smithy-go v1.23.2
+	github.com/aws/smithy-go v1.24.0
 	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/huh/spinner v0.0.0-20251005153135-a01a1e304532
 	github.com/spf13/cobra v1.10.1
