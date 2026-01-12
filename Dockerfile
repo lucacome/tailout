@@ -12,7 +12,7 @@ COPY --link . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -trimpath -a -o tailout .
 
 
-FROM --platform=$BUILDPLATFORM alpine:3.22 AS certs
+FROM --platform=$BUILDPLATFORM alpine:3.23 AS certs
 
 
 FROM scratch AS base
