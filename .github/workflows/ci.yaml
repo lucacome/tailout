@@ -82,7 +82,7 @@ jobs:
 
       - name: Restore Artifacts Cache
         id: restore-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ${{ github.workspace }}/dist
           key: tailout-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
@@ -141,7 +141,7 @@ jobs:
         run: gh cache delete --repo ${{ github.repository }} ${{ steps.restore-cache.outputs.cache-primary-key }}
 
       - name: Cache Artifacts
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         if: always()
         with:
           path: ${{ github.workspace }}/dist
@@ -174,7 +174,7 @@ jobs:
           driver-opts: network=host
 
       - name: Fetch Cached Artifacts
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ${{ github.workspace }}/dist
           key: ${{ needs.binary.outputs.cache-key }}
