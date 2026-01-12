@@ -34,7 +34,7 @@ runs:
         aws-region: ${{ inputs.region }}
 
     - name: Connect runner to tailscale
-      uses: tailscale/github-action@84a3f23bb4d843bcf4da6cf824ec1be473daf4de # v3
+      uses: tailscale/github-action@53acf823325fe9ca47f4cdaa951f90b4b0de5bb9 # v4
       with:
         oauth-client-id: ${{ inputs.tailscale_oauth_client_id }}
         oauth-secret: ${{ inputs.tailscale_oauth_client_secret }}
