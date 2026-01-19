@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.20
-FROM golang:1.25.5 AS builder
+FROM golang:1.25.6 AS builder
 ARG TARGETARCH
 
 WORKDIR /go/src/github.com/lucacome/tailout
