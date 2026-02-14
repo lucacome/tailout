@@ -88,7 +88,7 @@ jobs:
           key: tailout-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Create/Update Draft
-        uses: lucacome/draft-release@0ebb400b90474a1b791602046abf8394e9f5402d # v2.0.2
+        uses: lucacome/draft-release@4fce6cb19a9f95acacf9730efa42f7b8140d6fb6 # v2.0.4
         with:
           minor-label: "enhancement"
           major-label: "change"
