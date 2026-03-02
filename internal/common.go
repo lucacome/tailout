@@ -78,6 +78,9 @@ func getRegionDisplayNames(ctx context.Context, regionCodes []string) (map[strin
 
 		for _, param := range output.Parameters {
 			// Path: /aws/service/global-infrastructure/regions/{code}/longName
+			if param.Name == nil || param.Value == nil {
+				continue
+			}
 			parts := strings.Split(*param.Name, "/")
 			if len(parts) >= 7 {
 				names[parts[5]] = *param.Value
@@ -152,7 +155,7 @@ func SelectRegion(ctx context.Context) (string, error) {
 		// Step 1: pick broad area.
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title("Select a region").
+				Title("Select a geographic area").
 				Options(huh.NewOptions(broadRegions...)...).
 				Value(&selectedBroad),
 		),

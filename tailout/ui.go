@@ -62,13 +62,11 @@ func (app *App) UI(ctx context.Context) error {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		table := ""
-		var tableSb65 strings.Builder
+		var tableSB strings.Builder
 		for _, node := range nodes {
-			tableSb65.WriteString(fmt.Sprintf("<tr class=\"bg-white border-b\"><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td></tr>", node.Hostname, node.Addresses[0], node.LastSeen))
+			tableSB.WriteString(fmt.Sprintf("<tr class=\"bg-white border-b\"><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td></tr>", node.Hostname, node.Addresses[0], node.LastSeen))
 		}
-		table += tableSb65.String()
-		if _, err := w.Write([]byte(table)); err != nil {
+		if _, err := w.Write([]byte(tableSB.String())); err != nil {
 			slog.Error("failed to write response", "error", err)
 		}
 	})
