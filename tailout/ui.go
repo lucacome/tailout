@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/lucacome/tailout/internal"
@@ -62,9 +63,11 @@ func (app *App) UI(ctx context.Context) error {
 			return
 		}
 		table := ""
+		var tableSb65 strings.Builder
 		for _, node := range nodes {
-			table += fmt.Sprintf("<tr class=\"bg-white border-b\"><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td></tr>", node.Hostname, node.Addresses[0], node.LastSeen)
+			tableSb65.WriteString(fmt.Sprintf("<tr class=\"bg-white border-b\"><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td><td class=\"px-4 py-2\">%s</td></tr>", node.Hostname, node.Addresses[0], node.LastSeen))
 		}
+		table += tableSb65.String()
 		if _, err := w.Write([]byte(table)); err != nil {
 			slog.Error("failed to write response", "error", err)
 		}
