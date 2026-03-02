@@ -5,16 +5,91 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/charmbracelet/huh"
 	tslocal "tailscale.com/client/local"
 	tsapi "tailscale.com/client/tailscale/v2"
 	"tailscale.com/ipn"
 	"tailscale.com/tailcfg"
 )
+
+func getBroadRegion(region string) string {
+	switch {
+	case strings.HasPrefix(region, "us-gov-"):
+		return "US GovCloud"
+	case strings.HasPrefix(region, "us-"):
+		return "United States"
+	case strings.HasPrefix(region, "eu-"):
+		return "Europe"
+	case strings.HasPrefix(region, "ap-"):
+		return "Asia Pacific"
+	case strings.HasPrefix(region, "sa-"):
+		return "South America"
+	case strings.HasPrefix(region, "ca-"):
+		return "Canada"
+	case strings.HasPrefix(region, "af-"):
+		return "Africa"
+	case strings.HasPrefix(region, "me-"):
+		return "Middle East"
+	case strings.HasPrefix(region, "cn-"):
+		return "China"
+	case strings.HasPrefix(region, "il-"):
+		return "Israel"
+	case strings.HasPrefix(region, "mx-"):
+		return "Mexico"
+	default:
+		return "Other"
+	}
+}
+
+// getRegionDisplayNames fetches human-readable names for the given region codes
+// from the AWS SSM Parameter Store global infrastructure parameters.
+func getRegionDisplayNames(ctx context.Context, regionCodes []string) (map[string]string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+	ssmSvc := ssm.NewFromConfig(cfg)
+
+	names := make(map[string]string, len(regionCodes))
+
+	// SSM GetParameters accepts at most 10 names per call.
+	for i := 0; i < len(regionCodes); i += 10 {
+		end := i + 10
+		if end > len(regionCodes) {
+			end = len(regionCodes)
+		}
+		batch := regionCodes[i:end]
+
+		paths := make([]string, len(batch))
+		for j, code := range batch {
+			paths[j] = "/aws/service/global-infrastructure/regions/" + code + "/longName"
+		}
+
+		output, err := ssmSvc.GetParameters(ctx, &ssm.GetParametersInput{Names: paths})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get region names from SSM: %w", err)
+		}
+
+		for _, param := range output.Parameters {
+			// Path: /aws/service/global-infrastructure/regions/{code}/longName
+			if param.Name == nil || param.Value == nil {
+				continue
+			}
+			parts := strings.Split(*param.Name, "/")
+			if len(parts) >= 7 {
+				names[parts[5]] = *param.Value
+			}
+		}
+	}
+
+	return names, nil
+}
 
 func GetRegions(ctx context.Context) ([]string, error) {
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
@@ -40,9 +115,12 @@ func GetRegions(ctx context.Context) ([]string, error) {
 	return regionNames, nil
 }
 
-// Function that uses huh to return an AWS region fetched from the aws sdk.
+// SelectRegion uses a two-step huh form to first pick a broad geographic area
+// and then a specific region (shown with its human-readable name).
+// Both steps are in a single form so the user can navigate back to correct a
+// wrong broad-area selection.
 func SelectRegion(ctx context.Context) (string, error) {
-	regionNames, err := GetRegions(ctx)
+	regionCodes, err := GetRegions(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
 			return "", fmt.Errorf("operation canceled: %w", ctx.Err())
@@ -50,18 +128,68 @@ func SelectRegion(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to retrieve regions: %w", err)
 	}
 
-	var selectedRegion string
+	// Group region codes by broad geographic area.
+	broadMap := map[string][]string{}
+	for _, code := range regionCodes {
+		broad := getBroadRegion(code)
+		broadMap[broad] = append(broadMap[broad], code)
+	}
+
+	broadRegions := make([]string, 0, len(broadMap))
+	for broad := range broadMap {
+		broadRegions = append(broadRegions, broad)
+	}
+	sort.Strings(broadRegions)
+
+	// Fetch all display names upfront so OptionsFunc stays synchronous.
+	displayNames, err := getRegionDisplayNames(ctx, regionCodes)
+	if err != nil {
+		if ctx.Err() != nil {
+			return "", fmt.Errorf("region selection canceled: %w", ctx.Err())
+		}
+		return "", fmt.Errorf("failed to get region names: %w", err)
+	}
+
+	var selectedBroad, selectedRegion string
 	form := huh.NewForm(
+		// Step 1: pick broad area.
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title("Select a region").
-				Options(huh.NewOptions(regionNames...)...).
+				Title("Select a geographic area").
+				Options(huh.NewOptions(broadRegions...)...).
+				Value(&selectedBroad),
+		),
+		// Step 2: pick specific region. OptionsFunc re-evaluates whenever
+		// selectedBroad changes, enabling back navigation to step 1.
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select a specific region").
+				TitleFunc(func() string {
+					return "Select a region in " + selectedBroad
+				}, &selectedBroad).
+				OptionsFunc(func() []huh.Option[string] {
+					codes := broadMap[selectedBroad]
+					options := make([]huh.Option[string], 0, len(codes))
+					for _, code := range codes {
+						label, ok := displayNames[code]
+						if !ok {
+							label = code
+						} else {
+							// Strip the broad prefix, e.g. "Asia Pacific (Tokyo)" → "Tokyo"
+							if start := strings.LastIndex(label, "("); start != -1 {
+								label = strings.TrimSuffix(label[start+1:], ")")
+							}
+							label = label + " — " + code
+						}
+						options = append(options, huh.NewOption(label, code))
+					}
+					return options
+				}, &selectedBroad).
 				Value(&selectedRegion),
 		),
 	)
 
-	err = form.RunWithContext(ctx)
-	if err != nil {
+	if err := form.RunWithContext(ctx); err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return "", fmt.Errorf("region selection canceled: %w", ctxErr)
 		}
