@@ -5,7 +5,7 @@ go 1.25.5
 tool github.com/a-h/templ/cmd/templ
 
 require (
-	github.com/a-h/templ v0.3.977
+	github.com/a-h/templ v0.3.1001
 	github.com/aws/aws-sdk-go-v2 v1.41.2
 	github.com/aws/aws-sdk-go-v2/config v1.32.10
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.293.0
