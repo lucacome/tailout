@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -49,11 +51,8 @@ func getBroadRegion(region string) string {
 
 // getRegionDisplayNames fetches human-readable names for the given region codes
 // from the AWS SSM Parameter Store global infrastructure parameters.
-func getRegionDisplayNames(ctx context.Context, regionCodes []string) (map[string]string, error) {
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
-	}
+// It uses an already-loaded AWS config to avoid a redundant credential load.
+func getRegionDisplayNames(ctx context.Context, cfg aws.Config, regionCodes []string) (map[string]string, error) {
 	ssmSvc := ssm.NewFromConfig(cfg)
 
 	names := make(map[string]string, len(regionCodes))
@@ -91,11 +90,7 @@ func getRegionDisplayNames(ctx context.Context, regionCodes []string) (map[strin
 	return names, nil
 }
 
-func GetRegions(ctx context.Context) ([]string, error) {
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to load default config: %w", err)
-	}
+func getRegionsWithConfig(ctx context.Context, cfg aws.Config) ([]string, error) {
 	ec2Svc := ec2.NewFromConfig(cfg)
 
 	regions, err := ec2Svc.DescribeRegions(ctx, &ec2.DescribeRegionsInput{})
@@ -115,12 +110,25 @@ func GetRegions(ctx context.Context) ([]string, error) {
 	return regionNames, nil
 }
 
+func GetRegions(ctx context.Context) ([]string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load default config: %w", err)
+	}
+	return getRegionsWithConfig(ctx, cfg)
+}
+
 // SelectRegion uses a two-step huh form to first pick a broad geographic area
 // and then a specific region (shown with its human-readable name).
 // Both steps are in a single form so the user can navigate back to correct a
 // wrong broad-area selection.
 func SelectRegion(ctx context.Context) (string, error) {
-	regionCodes, err := GetRegions(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
+	if err != nil {
+		return "", fmt.Errorf("failed to load default config: %w", err)
+	}
+
+	regionCodes, err := getRegionsWithConfig(ctx, cfg)
 	if err != nil {
 		if ctx.Err() != nil {
 			return "", fmt.Errorf("operation canceled: %w", ctx.Err())
@@ -142,12 +150,15 @@ func SelectRegion(ctx context.Context) (string, error) {
 	sort.Strings(broadRegions)
 
 	// Fetch all display names upfront so OptionsFunc stays synchronous.
-	displayNames, err := getRegionDisplayNames(ctx, regionCodes)
+	// Treat SSM lookup as best-effort: if it fails for any non-context reason,
+	// fall back to showing plain region codes.
+	displayNames, err := getRegionDisplayNames(ctx, cfg, regionCodes)
 	if err != nil {
 		if ctx.Err() != nil {
 			return "", fmt.Errorf("region selection canceled: %w", ctx.Err())
 		}
-		return "", fmt.Errorf("failed to get region names: %w", err)
+		slog.Warn("failed to fetch region display names, falling back to region codes", "error", err)
+		displayNames = map[string]string{}
 	}
 
 	var selectedBroad, selectedRegion string
