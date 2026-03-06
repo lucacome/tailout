@@ -84,7 +84,7 @@ tailout stop
 - `/etc/tailout/config.{yml,yaml,hcl,json,toml}`
 - `$HOME/.tailout/config.{yml,yaml,hcl,json,toml}`
 
-For exemple, you could have this content in `/etc/tailout/config.yml`:
+For example, you could have this content in `/etc/tailout/config.yml`:
 
 ```yaml
 tailscale:
