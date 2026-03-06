@@ -1,3 +1,4 @@
+exclude: .github/.cache
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -20,6 +21,11 @@ repos:
         args: [--fix=lf]
       - id: no-commit-to-branch
       - id: fix-byte-order-marker
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.2
+    hooks:
+      - id: codespell
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
