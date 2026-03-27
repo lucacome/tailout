@@ -1,6 +1,6 @@
 module github.com/lucacome/tailout
 
-go 1.26.0
+go 1.26.1
 
 tool github.com/a-h/templ/cmd/templ
 
@@ -17,12 +17,12 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
-	tailscale.com v1.94.2
+	tailscale.com v1.96.5
 	tailscale.com/client/tailscale/v2 v2.8.0
 )
 
 require (
-	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
