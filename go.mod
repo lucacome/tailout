@@ -1,6 +1,6 @@
 module github.com/lucacome/tailout
 
-go 1.26.0
+go 1.26.2
 
 tool github.com/a-h/templ/cmd/templ
 
