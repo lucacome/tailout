@@ -12,7 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.7
 	github.com/aws/smithy-go v1.24.2
-	github.com/charmbracelet/huh v0.8.0
+	github.com/charmbracelet/huh/v2 v2.0.3
 	github.com/charmbracelet/huh/spinner v0.0.0-20251005153135-a01a1e304532
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
