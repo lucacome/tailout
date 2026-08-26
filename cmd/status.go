@@ -11,8 +11,8 @@ func buildStatusCommand(app *tailout.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "status",
-		Short: "Show tailout-related informations",
-		Long: `Show tailout-related informations.
+		Short: "Show tailout-related information",
+		Long: `Show tailout-related information.
 
 		This command will show the status of tailout nodes, including the node name and whether it is connected or not.
 
