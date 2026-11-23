@@ -15,7 +15,7 @@ require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/huh/spinner v0.0.0-20251005153135-a01a1e304532
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
 	tailscale.com v1.102.2
 	tailscale.com/client/tailscale/v2 v2.10.1
